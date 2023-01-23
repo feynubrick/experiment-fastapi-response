@@ -5,11 +5,9 @@ from datetime import date
 from fastapi import FastAPI
 
 
-class ImperialUnit(BaseModel):
-    feets: float = 0
-
-class MetricUnit(BaseModel):
-    meters: float = 0
+class LengthInImperialUnit(BaseModel):
+    feet: int = 0
+    inch: float = 0
 
 class Unit(str, Enum):
     imperial = "imperial"
@@ -33,30 +31,32 @@ class EnglishTeamForResponse(EnglishTeamBase):
 
 class EnglishPlayer(BaseModel):
     name: str
-    height: ImperialUnit | MetricUnit
+    height: LengthInImperialUnit | float
     position: str
     birth_date: date
     teams: list[TeamId]
 
-def feets_to_metric(value: ImperialUnit) -> MetricUnit:
-    CONVERSION_RATE = 1 / 3.2808399
-    return MetricUnit(meters=value.feets * CONVERSION_RATE)
+def feets_to_metric(length: LengthInImperialUnit) -> float:
+    FEET_TO_INCH = 12
+    INCH_TO_METER = 0.0254
+    inch = length.feet * FEET_TO_INCH + length.inch
+    return inch * INCH_TO_METER
 
 app = FastAPI()
 
 database = {
-    "players": [
-        EnglishPlayer(name="Steven Gerrard", height=ImperialUnit(feets=6) , position="Midfielder", birth_date=date(1980, 5, 30), teams=[TeamId.liverpool]),
-        EnglishPlayer(name="Wayne Rooney", height=ImperialUnit(feets=5.9), position="Forward", birth_date=date(1985, 10, 24), teams=[TeamId.man_utd]),
-        EnglishPlayer(name="Frank Lampard", height=ImperialUnit(feets=6), position="Midfielder", birth_date=date(1978, 6, 20), teams=[TeamId.chelsea, TeamId.man_city]),
-        EnglishPlayer(name="Michael Owen", height=ImperialUnit(feets=5.8), position="Forward", birth_date=date(1979, 12, 14), teams=[TeamId.liverpool, TeamId.man_utd]),
-    ],
     "teams": [
         EnglishTeamForDB(id=TeamId.liverpool, name="Liverpool FC", city="Liverpool"),
         EnglishTeamForDB(id=TeamId.man_utd, name="Manchester United", city="Manchester"),
         EnglishTeamForDB(id=TeamId.chelsea, name="Chelsea FC", city="London"),
         EnglishTeamForDB(id=TeamId.man_city, name="Manchester City", city="Manchester"),
-    ]
+    ],
+    "players": [
+        EnglishPlayer(name="Steven Gerrard", height=LengthInImperialUnit(feet=6, inch=0), position="Midfielder", birth_date=date(1980, 5, 30), teams=[TeamId.liverpool]),
+        EnglishPlayer(name="Wayne Rooney", height=LengthInImperialUnit(feet=5, inch=9), position="Forward", birth_date=date(1985, 10, 24), teams=[TeamId.man_utd]),
+        EnglishPlayer(name="Frank Lampard", height=LengthInImperialUnit(feet=6, inch=0), position="Midfielder", birth_date=date(1978, 6, 20), teams=[TeamId.chelsea, TeamId.man_city]),
+        EnglishPlayer(name="Michael Owen", height=LengthInImperialUnit(feet=5, inch=8), position="Forward", birth_date=date(1979, 12, 14), teams=[TeamId.liverpool, TeamId.man_utd]),
+    ],
 }
 
 
