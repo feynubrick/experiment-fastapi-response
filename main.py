@@ -9,9 +9,11 @@ class LengthInImperialUnit(BaseModel):
     feet: int = 0
     inch: float = 0
 
-class Unit(str, Enum):
-    imperial = "imperial"
-    metric = "metric"
+def feets_to_metric(length: LengthInImperialUnit) -> float:
+    FEET_TO_INCH = 12
+    INCH_TO_METER = 0.0254
+    inch = length.feet * FEET_TO_INCH + length.inch
+    return inch * INCH_TO_METER
 
 class TeamId(str, Enum):
     liverpool = "liverpool"
@@ -31,16 +33,12 @@ class EnglishTeamForResponse(EnglishTeamBase):
 
 class EnglishPlayer(BaseModel):
     name: str
-    height: LengthInImperialUnit | float
+    height: LengthInImperialUnit
+    height_in_metric: float = 0
     position: str
     birth_date: date
     teams: list[TeamId]
 
-def feets_to_metric(length: LengthInImperialUnit) -> float:
-    FEET_TO_INCH = 12
-    INCH_TO_METER = 0.0254
-    inch = length.feet * FEET_TO_INCH + length.inch
-    return inch * INCH_TO_METER
 
 app = FastAPI()
 
@@ -69,18 +67,14 @@ class EnglishPlayerForResponse(EnglishPlayer):
     teams: list[EnglishTeamForResponse]
 
 @app.get("/legends/", response_model=list[EnglishPlayerForResponse])
-async def get_lengend_players(unit: Unit = Unit.imperial) -> list[EnglishPlayerForResponse]:
+async def get_lengend_players() -> list[EnglishPlayerForResponse]:
     players = []
     for player in database["players"]:
         player_data = player.dict()
         teams = [get_team(team_id) for team_id in player_data["teams"]]
         player_data["teams"] = teams
-
+        player_data["height_in_metric"] = feets_to_metric(player.height)
         players.append(EnglishPlayerForResponse(**player_data))
 
-    if unit == Unit.metric:
-        for player in players:
-            player.height = feets_to_metric(player.height)
-            print(player.height)
     print(players)
     return players
