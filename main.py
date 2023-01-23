@@ -33,8 +33,7 @@ class EnglishTeamForResponse(EnglishTeamBase):
 
 class EnglishPlayer(BaseModel):
     name: str
-    height: LengthInImperialUnit
-    height_in_metric: float = 0
+    height: LengthInImperialUnit | float
     position: str
     birth_date: date
     teams: list[TeamId]
@@ -66,14 +65,19 @@ def get_team(team_id: TeamId):
 class EnglishPlayerForResponse(EnglishPlayer):
     teams: list[EnglishTeamForResponse]
 
+class Unit(str, Enum):
+    imperial = "imperial" # 피트, 인치
+    metric = "metric" # 미터법
+
 @app.get("/legends/", response_model=list[EnglishPlayerForResponse])
-async def get_lengend_players() -> list[EnglishPlayerForResponse]:
+async def get_lengend_players(unit: Unit) -> list[EnglishPlayerForResponse]:
     players = []
     for player in database["players"]:
         player_data = player.dict()
         teams = [get_team(team_id) for team_id in player_data["teams"]]
         player_data["teams"] = teams
-        player_data["height_in_metric"] = feets_to_metric(player.height)
+        if unit == Unit.metric:
+            player_data["height"] = feets_to_metric(player.height)
         players.append(EnglishPlayerForResponse(**player_data))
 
     print(players)
